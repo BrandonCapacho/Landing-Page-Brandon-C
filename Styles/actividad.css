@@ -1,0 +1,18 @@
+.object-fit-cover {
+    height: 460px;
+    width: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+}
+
+/* hover usando utilidades de Bootstrap + animación propia */
+.card-hover {
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.card-hover:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 0.75rem 1.5rem rgba(0,0,0,0.15); /* similar a shadow-lg de Bootstrap */
+    z-index: 2;
+}
+
