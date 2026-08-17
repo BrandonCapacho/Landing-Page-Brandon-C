@@ -2,244 +2,77 @@
 <html lang="es">
 
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Brandon Capacho — Portafolio Personal</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <title>Para Danika Jusara</title>
+  <meta name="description" content="Una constelación de razones para quererte." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>💖</text></svg>" />
+  <link rel="stylesheet" href="./css/styles.css" />
 
-    <link rel="stylesheet" href="Styles/index.css">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
-        integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
-
-
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- El importmap debe ir ANTES de cualquier <script type="module">.
+       La barra final de "three/addons/" es obligatoria en clave y valor. -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.185.1/examples/jsm/"
+      }
+    }
+  </script>
 </head>
 
 <body>
+  <canvas id="canvas" aria-label="Constelación interactiva de mensajes"></canvas>
 
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
-        <div class="container">
-            <a class="navbar-brand" href="#">Brandon Capacho</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
-                aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
+  <!-- Encabezado -->
+  <header id="encabezado">
+    <p id="subtitulo"></p>
+    <h1 id="titulo"></h1>
+  </header>
 
-            <div class="collapse navbar-collapse" id="mainNav">
-                <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
-                    <li class="nav-item"><a class="nav-link active" href="#inicio">Inicio</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#sobre-mi">Sobre mí</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#proyectos">Proyectos</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#contacto">Contacto</a></li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+  <!-- Pista de uso -->
+  <p id="pista" aria-hidden="true"></p>
 
+  <!-- Firma -->
+  <p id="firma"></p>
 
-    <main class="container mt-5 pt-5">
+  <!-- Panel del mensaje -->
+  <div id="fondo-panel" hidden></div>
+  <div id="panel" role="dialog" aria-modal="true" aria-labelledby="panel-titulo" hidden tabindex="-1">
+    <button id="panel-cerrar" type="button" aria-label="Cerrar">&times;</button>
+    <h2 id="panel-titulo"></h2>
+    <p id="panel-texto" aria-live="polite"></p>
+  </div>
 
+  <!-- Respaldo: sin WebGL, navegador viejo o CDN caído.
+       La declaración se lee igual, solo que sin 3D. -->
+  <section id="respaldo" hidden>
+    <h1 id="respaldo-titulo"></h1>
+    <ol id="respaldo-lista"></ol>
+    <p id="respaldo-firma"></p>
+  </section>
 
-        <section id="inicio" class="py-5">
-            <div class="row align-items-center g-4">
-                <div class="col-lg-6">
-                    <h1 class="display-5 fw-bold">Hola soy Brandon</h1>
-                    <p class="lead text-muted">Estudiante de Ingeniería de Sistemas en la UDES. Me apasiona la
-                        ciberseguridad y desarrollo de páginas web. Egresado del colegio Comfanorte. Vivo en Cúcuta,
-                        Colombia.</p>
+  <noscript>
+    <div id="sin-js">
+      <h1>Para Danika Jusara</h1>
+      <p>Esta página necesita JavaScript para mostrarte la constelación.
+        Pero lo importante cabe en una línea: <strong>te amo</strong>. — Brandon</p>
+    </div>
+  </noscript>
 
-                    <div class="d-flex flex-column flex-sm-row gap-2">
-                        <a href="#contacto" class="btn btn-primary btn-lg"><i
-                                class="bi bi-envelope-fill me-2"></i>Contactar</a>
-                        <a href="#proyectos" class="btn btn-outline-primary btn-lg"><i
-                                class="bi bi-code-slash me-2"></i>Ver proyectos</a>
-                    </div>
+  <script type="module" src="./js/main.js"></script>
 
-                    <ul class="list-unstyled mt-4 small text-muted">
-                        <li><i class="bi bi-person-fill me-2"></i>18 años</li>
-                        <li><i class="bi bi-geo-alt-fill me-2"></i>Cúcuta, Colombia</li>
-                        <li><i class="bi bi-building me-2"></i>UDES, Ingeniería de Sistemas</li>
-                        <li><i class="bi bi-award-fill me-2"></i>Egresado: Colegio Comfanorte</li>
-                    </ul>
-                </div>
-
-                <div class="col-lg-6 text-center">
-                    <img src="/img/logo2.png" alt="Foto Brandon" class="img-fluid rounded shadow-sm">
-                </div>
-            </div>
-        </section>
-
-
-        <section id="sobre-mi" class="py-5">
-            <h2 class="h3 mb-4 text-center">Sobre mí</h2>
-            <div class="row g-4">
-                <div class="col-12 col-md-6">
-                    <div class="card h-100 shadow-sm">
-                        <div class="card-body">
-                            <h5 class="card-title"><i
-                                    class="bi bi-shield-lock-fill me-2 text-primary"></i>Ciberseguridad</h5>
-                            <p class="card-text text-muted">Interés en protección de sistemas, análisis de
-                                vulnerabilidades
-                                y buenas prácticas para mantener servicios seguros.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-12 col-md-6">
-                    <div class="card h-100 shadow-sm">
-                        <div class="card-body">
-                            <h5 class="card-title"><i class="bi bi-laptop-fill me-2 text-primary"></i>Desarrollo Web
-                            </h5>
-                            <p class="card-text text-muted">Diseño y construcción de páginas responsivas usando HTML,
-                                Bootstrap y buenas prácticas de accesibilidad y rendimiento.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-
-        <section id="habilidades" class="py-5">
-            <h2 class="h3 mb-4 text-center">Habilidades</h2>
-            <div class="row row-cols-1 row-cols-md-3 g-4">
-                <div class="col">
-                    <div class="d-flex align-items-start gap-3">
-                        <div class="fs-1 text-primary"><i class="bi bi-code-slash"></i></div>
-                        <div>
-                            <h5 class="mb-1">Front-end</h5>
-                            <p class="text-muted mb-0">HTML, CSS y Bootstrap para crear interfaces limpias.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col">
-                    <div class="d-flex align-items-start gap-3">
-                        <div class="fs-1 text-primary"><i class="bi bi-shield-lock"></i></div>
-                        <div>
-                            <h5 class="mb-1">Ciberseguridad</h5>
-                            <p class="text-muted mb-0">Conceptos de seguridad, análisis y mitigación de
-                                vulnerabilidades.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col">
-                    <div class="d-flex align-items-start gap-3">
-                        <div class="fs-1 text-primary"><i class="bi bi-layers-half"></i></div>
-                        <div>
-                            <h5 class="mb-1">Buenas prácticas</h5>
-                            <p class="text-muted mb-0">Optimización, mantenibilidad y accesibilidad en proyectos web.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-
-        <section id="proyectos" class="py-5">
-            <h2 class="h3 mb-4 text-center">Proyectos</h2>
-            <div class="row g-4">
-                <div class="col-12 col-md-6 col-lg-4">
-                    <div class="card h-100 shadow-sm">
-                        <img src="/img/portafolio.jpg" class="card-img-top" alt="Portfolio web">
-                        <div class="card-body">
-                            <h5 class="card-title">Portafolio Web</h5>
-                            <p class="card-text text-muted">Sitio personal responsivo con proyectos, CV y contacto.</p>
-                        </div>
-                        <div class="card-footer bg-transparent border-0">
-                            <a href="#contacto" class="btn btn-outline-primary w-100">Proximamente...</a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-12 col-md-6 col-lg-4">
-                    <div class="card h-100 shadow-sm">
-                        <img src="/img/ciber.jpg" class="card-img-top" alt="Prueba seguridad">
-                        <div class="card-body">
-                            <h5 class="card-title">Evaluación de seguridad</h5>
-                            <p class="card-text text-muted">Análisis básico de vulnerabilidades en aplicaciones web.</p>
-                        </div>
-                        <div class="card-footer bg-transparent border-0">
-                            <a href="#contacto" class="btn btn-outline-primary w-100">Proximamente...</a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-12 col-md-6 col-lg-4">
-                    <div class="card h-100 shadow-sm">
-                        <img src="/img/land.jpg" class="card-img-top" alt="Landing page">
-                        <div class="card-body">
-                            <h5 class="card-title">Landing pages</h5>
-                            <p class="card-text text-muted">Landing optimizadas para conversiones y rendimiento.</p>
-                        </div>
-                        <div class="card-footer bg-transparent border-0">
-                            <a href="#contacto" class="btn btn-outline-primary w-100">Proximamente...</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-
-        <section id="contacto" class="py-5">
-            <h2 class="h3 mb-4 text-center">Contacto</h2>
-            <div class="row justify-content-center">
-                <div class="col-12 col-md-8">
-                    <form action="#" method="post" class="needs-validation" novalidate>
-                        <div class="mb-3">
-                            <label for="nombre" class="form-label">Nombre</label>
-                            <input type="text" class="form-control" id="nombre" name="nombre" required>
-                            <div class="invalid-feedback">Por favor ingresa tu nombre.</div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="email" class="form-label">Correo electrónico</label>
-                            <input type="email" class="form-control" id="email" name="email" required>
-                            <div class="invalid-feedback">Introduce un correo válido.</div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="mensaje" class="form-label">Mensaje</label>
-                            <textarea class="form-control" id="mensaje" name="mensaje" rows="5" required></textarea>
-                            <div class="invalid-feedback">Escribe tu mensaje.</div>
-                        </div>
-
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg">Enviar mensaje</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </section>
-    </main>
-
-
-    <footer class="bg-dark text-light py-4 mt-5">
-        <div class="container">
-            <div class="row align-items-center">
-                <div class="col-md-6 mb-3 mb-md-0">
-                    <h5 class="mb-1">Brandon Capacho</h5>
-                    <p class="small mb-0 ">brandoncapa@proton.me • Cúcuta, Colombia</p>
-                </div>
-                <div class="col-md-6 text-md-end">
-                    <a href="#" class="text-light me-3 fs-4"><i class="bi bi-github"></i></a>
-                    <a href="#" class="text-light me-3 fs-4"><i class="bi bi-linkedin"></i></a>
-                    <a href="#" class="text-light me-3 fs-4"><i class="bi bi-instagram"></i></a>
-
-                </div>
-            </div>
-
-            <div class="text-center mt-3 small ">
-                <p> © 2025 Todos los derechos reservados.</p>
-            </div>
-        </div>
-    </footer>
-
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
-        crossorigin="anonymous"></script>
-
+  <!-- Navegadores sin módulos ES ni importmap -->
+  <script nomodule>
+    document.getElementById('respaldo').hidden = false;
+    document.getElementById('canvas').hidden = true;
+    document.getElementById('respaldo-titulo').textContent = 'Para Danika Jusara';
+    document.getElementById('respaldo-lista').innerHTML =
+      '<li><strong>Te amo</strong>Tu navegador no puede mostrar la constelación, ' +
+      'pero lo importante cabe en dos palabras.</li>';
+    document.getElementById('respaldo-firma').textContent = 'Hecho a mano por Brandon';
+  </script>
 </body>
 
 </html>

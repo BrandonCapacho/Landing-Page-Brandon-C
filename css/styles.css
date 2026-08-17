@@ -1,0 +1,372 @@
+/* ═══════════════════════════════════════════════════════════
+   Para Danika Jusara — estilos
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  --rosa: #ff8fc4;
+  --rosa-claro: #ffd6e8;
+  --violeta: #b98cff;
+  --texto: #f4e9f2;
+  --tenue: rgba(244, 233, 242, 0.62);
+  --panel-fondo: rgba(28, 12, 34, 0.92);
+  --borde: rgba(255, 143, 196, 0.32);
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  height: 100dvh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
+  background-color: #05040c;
+  background-image: radial-gradient(ellipse at 50% 38%, #2b1030 0%, #150a24 38%, #0a0714 68%, #05040c 100%);
+  color: var(--texto);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ── Lienzo 3D ───────────────────────────────────────────── */
+
+#canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  /* Sin esto, el touchmove hace scroll y aborta el arrastre. */
+  touch-action: none;
+  cursor: default;
+}
+
+/* Capa que crea CSS2DRenderer. NO asigna pointer-events por su
+   cuenta: sin esta regla se traga todos los clics y el arrastre
+   deja de funcionar en silencio. */
+#capa-etiquetas,
+#capa-etiquetas * {
+  pointer-events: none;
+}
+
+#capa-etiquetas {
+  position: fixed;
+  inset: 0;
+}
+
+/* ── Etiquetas flotantes de los nodos ────────────────────── */
+
+.etiqueta {
+  font-family: var(--serif);
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  color: var(--rosa-claro);
+  text-shadow: 0 0 12px rgba(255, 111, 174, 0.75), 0 1px 3px rgba(0, 0, 0, 0.9);
+  white-space: nowrap;
+  user-select: none;
+  transition: color 0.25s ease;
+}
+
+/* El desplazamiento va en el span: el div lleva el transform que le
+   pone CSS2DRenderer y no se puede tocar desde aquí. */
+.etiqueta>span {
+  display: block;
+  transform: translateY(-2.6em);
+}
+
+.etiqueta.centro {
+  font-size: 1.5rem;
+  font-style: italic;
+  letter-spacing: 0.04em;
+  color: #fff;
+  text-shadow: 0 0 22px rgba(255, 111, 174, 0.95), 0 0 48px rgba(255, 111, 174, 0.5);
+}
+
+.etiqueta.centro>span {
+  transform: translateY(-3.1em);
+}
+
+.etiqueta.activa {
+  color: #fff;
+}
+
+/* ── Encabezado, pista y firma ───────────────────────────── */
+
+#encabezado {
+  position: fixed;
+  top: max(1.6rem, env(safe-area-inset-top));
+  left: 0;
+  right: 0;
+  text-align: center;
+  pointer-events: none;
+  z-index: 3;
+}
+
+#subtitulo {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--tenue);
+}
+
+#titulo {
+  margin: 0.35rem 0 0;
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(1.5rem, 4.5vw, 2.5rem);
+  letter-spacing: 0.02em;
+  color: var(--rosa-claro);
+  text-shadow: 0 0 30px rgba(255, 111, 174, 0.45);
+}
+
+#pista,
+#firma {
+  position: fixed;
+  left: 0;
+  right: 0;
+  margin: 0;
+  text-align: center;
+  font-size: 0.74rem;
+  color: var(--tenue);
+  pointer-events: none;
+  z-index: 3;
+}
+
+#pista {
+  bottom: calc(2.6rem + env(safe-area-inset-bottom));
+  letter-spacing: 0.06em;
+  transition: opacity 0.8s ease;
+}
+
+#firma {
+  bottom: calc(1rem + env(safe-area-inset-bottom));
+  font-family: var(--serif);
+  font-style: italic;
+  opacity: 0.55;
+}
+
+/* ── Panel del mensaje ───────────────────────────────────── */
+
+#fondo-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 8;
+  background: rgba(6, 3, 14, 0.55);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  opacity: 0;
+  transition: opacity 0.28s ease;
+}
+
+#fondo-panel.visible {
+  opacity: 1;
+}
+
+#panel {
+  position: fixed;
+  z-index: 9;
+  top: 50%;
+  left: 50%;
+  width: min(34rem, calc(100vw - 2.5rem));
+  max-height: 70dvh;
+  overflow-y: auto;
+  touch-action: pan-y;
+  padding: 2rem 2.2rem 2.2rem;
+  border: 1px solid var(--borde);
+  border-radius: 1.1rem;
+  background: var(--panel-fondo);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.65), 0 0 60px rgba(255, 111, 174, 0.12);
+  transform: translate(-50%, -46%);
+  opacity: 0;
+  transition: opacity 0.28s ease, transform 0.28s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+#panel.visible {
+  opacity: 1;
+  transform: translate(-50%, -50%);
+}
+
+#panel:focus-visible {
+  outline: 2px solid var(--rosa);
+  outline-offset: 3px;
+}
+
+#panel-titulo {
+  margin: 0 0 0.9rem;
+  padding-right: 2rem;
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.6rem;
+  color: var(--rosa);
+}
+
+#panel-texto {
+  margin: 0;
+  font-size: 1.02rem;
+  line-height: 1.72;
+  color: var(--texto);
+}
+
+#panel-cerrar {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  font-size: 1.6rem;
+  line-height: 1;
+  color: var(--tenue);
+  background: none;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+#panel-cerrar:hover,
+#panel-cerrar:focus-visible {
+  color: #fff;
+  background: rgba(255, 143, 196, 0.16);
+}
+
+/* Móvil: hoja inferior en vez de tarjeta centrada. */
+@media (max-width: 640px) {
+  #panel {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    max-height: 62dvh;
+    padding: 1.6rem 1.4rem calc(1.8rem + env(safe-area-inset-bottom));
+    border: 0;
+    border-top: 1px solid var(--borde);
+    border-radius: 1.2rem 1.2rem 0 0;
+    transform: translateY(100%);
+  }
+
+  #panel.visible {
+    transform: translateY(0);
+  }
+
+  #titulo {
+    font-size: 1.45rem;
+  }
+
+  #pista {
+    bottom: calc(2.3rem + env(safe-area-inset-bottom));
+    font-size: 0.7rem;
+  }
+
+  .etiqueta {
+    font-size: 0.8rem;
+  }
+
+  .etiqueta.centro {
+    font-size: 1.15rem;
+  }
+
+  .etiqueta.centro>span {
+    transform: translateY(-3.4em);
+  }
+}
+
+/* ── Respaldo sin WebGL / sin módulos ────────────────────── */
+
+#respaldo,
+#sin-js {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  overflow-y: auto;
+  padding: 3rem 1.5rem 4rem;
+  background-image: radial-gradient(ellipse at 50% 20%, #2b1030 0%, #150a24 40%, #05040c 100%);
+}
+
+#respaldo h1,
+#sin-js h1 {
+  max-width: 34rem;
+  margin: 0 auto 2rem;
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(1.7rem, 6vw, 2.6rem);
+  text-align: center;
+  color: var(--rosa-claro);
+}
+
+#respaldo ol {
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: 0 0 0 1.2rem;
+  list-style: none;
+  counter-reset: n;
+}
+
+#respaldo li {
+  position: relative;
+  margin: 0 0 1.9rem;
+  padding-left: 0.4rem;
+  counter-increment: n;
+  line-height: 1.7;
+}
+
+#respaldo li::before {
+  content: counter(n);
+  position: absolute;
+  left: -1.5rem;
+  top: 0.15rem;
+  font-size: 0.72rem;
+  color: var(--rosa);
+  opacity: 0.7;
+}
+
+#respaldo li strong {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.15rem;
+  color: var(--rosa);
+}
+
+#respaldo-firma,
+#sin-js p {
+  max-width: 34rem;
+  margin: 2.5rem auto 0;
+  text-align: center;
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--tenue);
+  line-height: 1.7;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* ── Movimiento reducido ─────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
