@@ -68,35 +68,64 @@ body {
 .etiqueta {
   font-family: var(--serif);
   font-size: 0.95rem;
-  letter-spacing: 0.02em;
-  color: var(--rosa-claro);
-  text-shadow: 0 0 12px rgba(255, 111, 174, 0.75), 0 1px 3px rgba(0, 0, 0, 0.9);
+  line-height: 1.28;
+  letter-spacing: 0.015em;
+  color: #fff5fa;
   white-space: nowrap;
   user-select: none;
-  transition: color 0.25s ease;
+  will-change: transform;
 }
 
-/* El desplazamiento va en el span: el div lleva el transform que le
-   pone CSS2DRenderer y no se puede tocar desde aquí. */
+/* El desplazamiento y la píldora van en el span: el div lleva el
+   transform que le escribe CSS2DRenderer y no se puede tocar desde
+   aquí. Sin backdrop-filter a propósito: 13 elementos que cambian de
+   transform cada frame forzarían una lectura de desenfoque a pantalla
+   completa por elemento en cada frame — la forma clásica de bajar un
+   móvil de 60 a 20 fps. Un relleno plano y opaco da >7:1 de contraste
+   tanto sobre el cielo oscuro como sobre el brillo rosa del centro,
+   que es justo donde el texto blanco se perdía antes. */
 .etiqueta>span {
-  display: block;
-  transform: translateY(-2.6em);
+  display: inline-block;
+  transform: translateY(-2.35em);
+  padding: 0.22em 0.66em 0.3em;
+  border-radius: 999px;
+  background: rgba(12, 6, 20, 0.66);
+  border: 1px solid rgba(255, 143, 196, 0.18);
+  box-shadow: 0 2px 10px rgba(3, 1, 8, 0.55);
+  /* Sin resplandor de color: ese desenfoque es lo que empastaba los
+     acentos (á é í ó ú ñ) en una serif chica. Solo sombra dura de 1px. */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 .etiqueta.centro {
   font-size: 1.5rem;
   font-style: italic;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   color: #fff;
-  text-shadow: 0 0 22px rgba(255, 111, 174, 0.95), 0 0 48px rgba(255, 111, 174, 0.5);
 }
 
 .etiqueta.centro>span {
-  transform: translateY(-3.1em);
+  transform: translateY(-2.9em);
+  padding: 0.26em 0.9em 0.34em;
+  background: rgba(12, 6, 20, 0.72);
 }
 
-.etiqueta.activa {
+.etiqueta.activa>span {
+  background: rgba(30, 10, 40, 0.82);
   color: #fff;
+}
+
+/* El globo compartido de los secundarios: más chico, sans, y sigue al
+   punto que esté resaltado en vez de tener uno fijo por nodo. */
+.etiqueta.globo {
+  font-size: 0.82rem;
+  font-family: var(--sans);
+}
+
+.etiqueta.globo>span {
+  transform: translateY(-1.9em);
+  padding: 0.2em 0.6em 0.26em;
 }
 
 /* ── Encabezado, pista y firma ───────────────────────────── */
@@ -275,12 +304,20 @@ body {
     font-size: 0.8rem;
   }
 
+  .etiqueta>span {
+    padding: 0.18em 0.55em 0.26em;
+  }
+
   .etiqueta.centro {
     font-size: 1.15rem;
   }
 
   .etiqueta.centro>span {
     transform: translateY(-3.4em);
+  }
+
+  .etiqueta.globo {
+    font-size: 0.76rem;
   }
 }
 
@@ -316,7 +353,10 @@ body {
   counter-reset: n;
 }
 
-#respaldo li {
+/* El selector con > es a propósito: las razones anidadas de más abajo
+   son <li> también, y sin el hijo-directo se colarían en la misma
+   numeración del mensaje principal. */
+#respaldo ol>li {
   position: relative;
   margin: 0 0 1.9rem;
   padding-left: 0.4rem;
@@ -324,7 +364,7 @@ body {
   line-height: 1.7;
 }
 
-#respaldo li::before {
+#respaldo ol>li::before {
   content: counter(n);
   position: absolute;
   left: -1.5rem;
@@ -334,7 +374,7 @@ body {
   opacity: 0.7;
 }
 
-#respaldo li strong {
+#respaldo ol>li>strong {
   display: block;
   margin-bottom: 0.3rem;
   font-family: var(--serif);
@@ -342,6 +382,35 @@ body {
   font-weight: 400;
   font-size: 1.15rem;
   color: var(--rosa);
+}
+
+/* Las razones de cada racimo, ancladas debajo de su mensaje. */
+#respaldo ol>li>ul {
+  margin: 0.9rem 0 0;
+  padding: 0 0 0 1.1rem;
+  list-style: none;
+  border-left: 1px solid var(--borde);
+}
+
+#respaldo ol>li>ul>li {
+  margin: 0 0 0.85rem;
+  padding-left: 0.6rem;
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+#respaldo ol>li>ul>li:last-child {
+  margin-bottom: 0;
+}
+
+#respaldo ol>li>ul>li>strong {
+  display: block;
+  margin-bottom: 0.15rem;
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1rem;
+  color: var(--rosa-claro);
 }
 
 #respaldo-firma,

@@ -24,24 +24,47 @@ export function crearTexturaHalo() {
 }
 
 /**
- * Distancia de cámara que garantiza que la constelación entre completa.
- * Se calcula desde las dos dimensiones reales (la esfera está achatada),
- * y se queda con la más exigente. Así el retrato se resuelve solo.
+ * Núcleo estrecho y brillante + resplandor suave: un secundario se lee
+ * como un punto de luz, no como un planeta pequeño. Distinta de
+ * crearTexturaHalo (más ancha y difusa) porque un THREE.Points de 100
+ * elementos aditivos necesita menos "sobra" por punto o todo se lava.
  */
-export function distanciaEncuadre(camara, esMovil) {
-  const a = esMovil ? AJUSTES.achatadoMovil : AJUSTES.achatado;
-  const m = esMovil ? AJUSTES.margenEncuadreMovil : AJUSTES.margenEncuadre;
-  const semiAncho = AJUSTES.radioHogar * a.x + m.x;
-  const semiAlto = AJUSTES.radioHogar * a.y + m.y;
+export function crearTexturaPunto() {
+  const s = 128;
+  const c = document.createElement('canvas');
+  c.width = c.height = s;
+  const ctx = c.getContext('2d');
+  const g = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+  g.addColorStop(0.0, 'rgba(255,255,255,1)');
+  g.addColorStop(0.12, 'rgba(255,255,255,0.85)');
+  g.addColorStop(0.34, 'rgba(255,255,255,0.16)');
+  g.addColorStop(1.0, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, s, s);
 
-  const tanV = Math.tan(THREE.MathUtils.degToRad(camara.fov) / 2);
-  const tanH = tanV * camara.aspect;
-  return Math.max(semiAlto / tanV, semiAncho / tanH);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
 }
 
-export function crearCamara(ancho, alto, esMovil) {
-  const camara = new THREE.PerspectiveCamera(58, ancho / alto, 0.1, 200);
-  camara.position.set(0, 0, distanciaEncuadre(camara, esMovil));
+export const FOV = 58;
+
+/**
+ * Distancia de cámara que garantiza que la constelación entre completa.
+ * `extension` es la mitad-ancho/alto/radio REAL medida por Constelacion
+ * tras generar los racimos — con racimos, un radio analítico ya no
+ * significa nada, así que ya no se adivina.
+ */
+export function distanciaEncuadre(camara, esMovil, extension) {
+  const m = esMovil ? AJUSTES.margenEncuadreMovil : AJUSTES.margenEncuadre;
+  const tanV = Math.tan(THREE.MathUtils.degToRad(camara.fov) / 2);
+  const tanH = tanV * camara.aspect;
+  return Math.max((extension.y + m.y) / tanV, (extension.x + m.x) / tanH);
+}
+
+export function crearCamara(ancho, alto, esMovil, extension) {
+  const camara = new THREE.PerspectiveCamera(FOV, ancho / alto, 0.1, 200);
+  camara.position.set(0, 0, distanciaEncuadre(camara, esMovil, extension));
   camara.lookAt(0, 0, 0);
   return camara;
 }

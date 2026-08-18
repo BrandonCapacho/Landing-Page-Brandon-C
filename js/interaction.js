@@ -8,6 +8,11 @@ const DURACION_TOQUE = 350; // ms
 
 export function conectarInteraccion({ canvas, camara, controles, constelacion, panel, pedirRender, esMovil }) {
   const raycaster = new THREE.Raycaster();
+  // Los secundarios son un THREE.Points, no mallas: el "objetivo de
+  // clic" de ese nivel es este umbral, un radio en unidades de mundo.
+  // Crece y decrece con el tamaño visual del punto solo, que es justo
+  // lo que se quiere para un objetivo táctil.
+  raycaster.params.Points.threshold = esMovil ? AJUSTES.umbralPuntosMovil : AJUSTES.umbralPuntos;
   const ndc = new THREE.Vector2();
   const plano = new THREE.Plane();
   const desfase = new THREE.Vector3();
@@ -27,16 +32,28 @@ export function conectarInteraccion({ canvas, camara, controles, constelacion, p
     ndc.y = -((e.clientY - r.top) / r.height) * 2 + 1;
   }
 
+  // Dos pasadas: mallas invisibles para centro+principales, y el
+  // Points de los secundarios. En un empate gana el principal — es el
+  // objetivo grande y el que lleva la etiqueta siempre visible.
   function golpear(e) {
     aNDC(e);
     raycaster.setFromCamera(ndc, camara);
-    return raycaster.intersectObjects(constelacion.golpes, false)[0] || null;
+    const pri = raycaster.intersectObjects(constelacion.golpes, false)[0] || null;
+    const sec = constelacion.puntos
+      ? raycaster.intersectObject(constelacion.puntos, false)[0] || null
+      : null;
+    if (!pri) return sec ? constelacion.secundarios[sec.index] : null;
+    if (!sec) return pri.object.userData.nodo;
+    return pri.distance <= sec.distance + AJUSTES.sesgoPrincipal
+      ? pri.object.userData.nodo
+      : constelacion.secundarios[sec.index];
   }
 
   function terminarArrastre(nodo) {
     if (nodo && !nodo.esCentro) {
       nodo.arrastrando = false;
       nodo.resaltado = false;
+      if (!nodo.esPrincipal) constelacion.establecerResaltado(null);
     }
     idActivo = null;
     nodoActivo = null;
@@ -49,8 +66,8 @@ export function conectarInteraccion({ canvas, camara, controles, constelacion, p
   // de que empiece a orbitar.
   function alBajar(e) {
     if (idActivo !== null) return; // un segundo dedo no secuestra el arrastre
-    const golpe = golpear(e);
-    if (!golpe) return; // no dio en un nodo: que orbite la cámara
+    const nodo = golpear(e);
+    if (!nodo) return; // no dio en un nodo: que orbite la cámara
 
     e.stopPropagation();
     controles.enabled = false;
@@ -59,7 +76,7 @@ export function conectarInteraccion({ canvas, camara, controles, constelacion, p
     } catch { /* algunos navegadores lo rechazan en punteros sintéticos */ }
 
     idActivo = e.pointerId;
-    nodoActivo = golpe.object.userData.nodo;
+    nodoActivo = nodo;
     xInicio = e.clientX;
     yInicio = e.clientY;
     tInicio = tUltima = performance.now();
@@ -69,6 +86,10 @@ export function conectarInteraccion({ canvas, camara, controles, constelacion, p
       nodoActivo.arrastrando = true;
       nodoActivo.resaltado = true;
       canvas.style.cursor = 'grabbing';
+      // En móvil, arrastrar un secundario lo nombra con el globo sin
+      // abrir el panel — el mismo camino de código sirve para el clic
+      // sostenido en escritorio, porque Pointer Events unifica ambos.
+      if (!nodoActivo.esPrincipal) constelacion.establecerResaltado(nodoActivo);
 
       // Plano paralelo a la pantalla que pasa por el nodo. Se construye
       // una sola vez aquí: recalcularlo mientras la cámara gira hace
@@ -137,17 +158,21 @@ export function conectarInteraccion({ canvas, camara, controles, constelacion, p
   let tHover = 0;
   function actualizarHover(e) {
     // Un raycast por evento de movimiento es innecesario; 60 ms basta.
+    // El golpe en dos pasadas (mallas + Points) sale en ~0.1-0.15 ms,
+    // así que este mismo estrangulamiento sigue sobrando de sobra.
     const ahora = performance.now();
     if (ahora - tHover < 60) return;
     tHover = ahora;
 
-    const golpe = golpear(e);
-    const nodo = golpe ? golpe.object.userData.nodo : null;
+    const nodo = golpear(e);
     if (nodo !== nodoHover) {
       if (nodoHover && !nodoHover.esCentro) nodoHover.resaltado = false;
       if (nodo && !nodo.esCentro) nodo.resaltado = true;
       if (nodoHover?.etiqueta) nodoHover.etiqueta.element.classList.remove('activa');
       if (nodo?.etiqueta) nodo.etiqueta.element.classList.add('activa');
+      // El globo y el resaltador son solo para un secundario de verdad;
+      // sobre un principal o el centro, que se apague si estaba prendido.
+      constelacion.establecerResaltado(nodo && !nodo.esPrincipal && !nodo.esCentro ? nodo : null);
       nodoHover = nodo;
       pedirRender();
     }
@@ -176,6 +201,7 @@ export function conectarInteraccion({ canvas, camara, controles, constelacion, p
       if (idActivo === null && nodoHover) {
         if (!nodoHover.esCentro) nodoHover.resaltado = false;
         nodoHover.etiqueta?.element.classList.remove('activa');
+        if (!nodoHover.esPrincipal && !nodoHover.esCentro) constelacion.establecerResaltado(null);
         nodoHover = null;
         canvas.style.cursor = 'default';
       }
