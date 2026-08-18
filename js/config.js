@@ -15,32 +15,32 @@ export const MENSAJES = [
   {
     titulo: 'Tu risa',
     texto:
-      'Tu risa es lo primero que busco en cualquier lugar. No importa cómo venga el día: ' +
-      'te escucho reír y algo dentro de mí se acomoda. Creo que podría reconocerla entre mil.',
+      'Cuatro mil veces "jaja" en estos meses — las conté, literal. Tu risa es lo primero ' +
+      'que busco en cualquier chat, en cualquier llamada. Podría reconocerla entre mil.',
   },
   {
     titulo: 'Tus ojos',
     texto:
-      'Hay días en que te quedas mirándome sin decir nada y entiendo todo. ' +
+      'Hay días en que te quedas mirándome en videollamada sin decir nada y entiendo todo. ' +
       'Tus ojos hablan antes que tú, y nunca han sabido mentirme.',
   },
   {
-    titulo: 'Tu voz',
+    titulo: 'Mi vida',
     texto:
-      'Me gusta cómo dices mi nombre. Suena distinto cuando lo dices tú, ' +
-      'como si me lo estuvieras devolviendo mejor de como te lo di.',
+      'Te digo "mi vida" tantas veces al día que perdí la cuenta hace rato. ' +
+      'No es una frase hecha: es lo más parecido a la verdad que conozco.',
   },
   {
     titulo: 'La calma',
     texto:
-      'Contigo se me baja el ruido. Puedo estar callado y no sentirme incómodo, ' +
+      'Contigo se me baja el ruido. Puedo escribirte sin pensar cada palabra, ' +
       'y eso no lo había tenido con nadie más. A tu lado no tengo que estar demostrando nada.',
   },
   {
-    titulo: 'El primer día',
+    titulo: 'Novios no oficiales',
     texto:
-      'Todavía me acuerdo del día en que empezó todo esto. En ese momento no sabía ' +
-      'que iba a ser importante, y mírame ahora: construyendo esto para decírtelo.',
+      'Nos pasamos semanas discutiendo si éramos novios o "novios no oficiales" — ' +
+      'una tontería que ahora me da risa, porque desde el primer mes ya sabía la respuesta.',
   },
   {
     titulo: 'Lo que aprendo',
@@ -49,16 +49,16 @@ export const MENSAJES = [
       'Aprendo de tu forma de tratar a la gente, de tu paciencia, de cómo no te rindes.',
   },
   {
-    titulo: 'Tus manías',
+    titulo: 'Los stickers',
     texto:
-      'Me gustan hasta las cosas que tú crees que son defectos. Esas manías tuyas ' +
-      'que sacas cuando estás cansada o distraída son mis partes favoritas.',
+      'Tienes un sticker para cada situación de la vida, sin excepción — casi dos mil ' +
+      'en lo que llevamos. Es de las cosas más tuyas que existen, y espero que nunca cambie.',
   },
   {
-    titulo: 'La distancia',
+    titulo: 'Princesa',
     texto:
-      'Los kilómetros y los horarios son un detalle logístico, no un final. ' +
-      'Tú vales cada espera, cada mensaje a deshora, cada plan que hay que reacomodar.',
+      'Te digo "princesa", "reina", "hermosa" — y tú a veces me dices "gordi" y me muero de risa. ' +
+      'Ese es nuestro idioma, y no lo cambiaría por hablar bien en ningún otro.',
   },
   {
     titulo: 'Cuando estás mal',
@@ -69,14 +69,14 @@ export const MENSAJES = [
   {
     titulo: 'Mi promesa',
     texto:
-      'Te prometo escucharte de verdad, no solo esperar mi turno para hablar. ' +
-      'Te prometo elegirte también los días difíciles, que son los que de verdad cuentan.',
+      'Nos hemos pedido perdón muchas veces, y los dos elegimos seguir. ' +
+      'Te prometo seguir eligiéndote también en los días en que cueste — esos son los que cuentan.',
   },
   {
-    titulo: 'El futuro',
+    titulo: 'Las Lajas',
     texto:
-      'Pienso en cosas pequeñas: un desayuno sin prisa, un viaje mal planeado, ' +
-      'discutir por una tontería y arreglarlo a los diez minutos. Contigo, todo eso suena bien.',
+      'Hablamos en broma de casarnos en Las Lajas, de los anillos, de quién va y quién no. ' +
+      'Ojalá en unos años sea broma solo la mitad, y la otra mitad ya esté pasando.',
   },
   {
     titulo: 'Te amo',
