@@ -1,8 +1,12 @@
 // Arranque: detecta WebGL, monta la escena y lleva el bucle.
 
-import { MENSAJES, CENTRO, TEXTOS, AJUSTES } from './config.js';
+import { MENSAJES, CENTRO, TEXTOS, AJUSTES, SECUNDARIOS, limitesRacimo } from './config.js';
 
 const esMovil = matchMedia('(max-width: 768px), (pointer: coarse)').matches;
+// Comprobado aquí, una sola vez: si ya se entra con movimiento
+// reducido, los nodos nacen directo en su sitio y se salta el
+// florecer-desde-el-centro decorativo por completo.
+const prefiereMovimientoReducido = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // ── Textos de la interfaz ───────────────────────────────────
 document.getElementById('titulo').textContent = TEXTOS.tituloPagina;
@@ -21,15 +25,32 @@ function mostrarRespaldo() {
   document.getElementById('respaldo-titulo').textContent = TEXTOS.tituloPagina;
   document.getElementById('respaldo-firma').textContent = `${CENTRO.texto}`;
 
+  // Sin 3D no hay racimos que explorar con el cursor, así que las
+  // razones de cada principal van anidadas debajo de su mensaje: la
+  // declaración se lee completa igual, solo que de arriba a abajo.
+  const limites = limitesRacimo();
   const lista = document.getElementById('respaldo-lista');
   lista.innerHTML = '';
-  for (const m of MENSAJES) {
+  MENSAJES.forEach((m, i) => {
     const li = document.createElement('li');
     const t = document.createElement('strong');
     t.textContent = m.titulo;
     li.append(t, document.createTextNode(m.texto));
+
+    const razones = SECUNDARIOS.slice(limites[i], limites[i + 1]);
+    if (razones.length) {
+      const sub = document.createElement('ul');
+      for (const r of razones) {
+        const sli = document.createElement('li');
+        const st = document.createElement('strong');
+        st.textContent = r.titulo;
+        sli.append(st, document.createTextNode(r.texto));
+        sub.appendChild(sli);
+      }
+      li.appendChild(sub);
+    }
     lista.appendChild(li);
-  }
+  });
 
   seccion.hidden = false;
   document.getElementById('canvas').hidden = true;
@@ -107,16 +128,23 @@ async function iniciar() {
   document.body.appendChild(capa);
 
   const scene = new THREE.Scene();
-  const camara = escena.crearCamara(ancho(), alto(), esMovil);
   const desvioY = esMovil ? AJUSTES.desvioYMovil : AJUSTES.desvioY;
-  camara.position.y = desvioY;
 
   const texturaHalo = escena.crearTexturaHalo();
+  const texturaPunto = escena.crearTexturaPunto();
   const estrellas = escena.crearEstrellas(texturaHalo, esMovil);
   scene.add(estrellas);
 
-  const constelacion = new constelacionMod.Constelacion(texturaHalo, esMovil);
+  // La Constelacion se construye ANTES de la cámara: con racimos, el
+  // encuadre necesita la extensión real ya generada, no un radio
+  // adivinado — así que ya no hay un orden "cámara primero" posible.
+  const constelacion = new constelacionMod.Constelacion(
+    texturaHalo, texturaPunto, esMovil, prefiereMovimientoReducido
+  );
   scene.add(constelacion.grupo);
+
+  const camara = escena.crearCamara(ancho(), alto(), esMovil, constelacion.extension);
+  camara.position.y = desvioY;
 
   // ── Órbita ────────────────────────────────────────────────
   const controles = new OrbitControls(camara, canvas);
@@ -171,9 +199,11 @@ async function iniciar() {
   }
 
   function enReposo() {
-    for (const nodo of constelacion.nodos) {
-      if (nodo.arrastrando || nodo.vel.lengthSq() > 1e-3) return false;
-      if (nodo.pos.distanceToSquared(nodo.home) > 1e-3) return false;
+    // Con 112 nodos (antes 12) siempre hay alguno con un resto minúsculo
+    // de velocidad; el umbral se afloja o el bucle nunca llega a aparcar.
+    for (const nodo of constelacion.todos) {
+      if (nodo.arrastrando || nodo.vel.lengthSq() > 4e-3) return false;
+      if (nodo.pos.distanceToSquared(nodo.home) > 4e-3) return false;
     }
     return true;
   }
@@ -215,7 +245,7 @@ async function iniciar() {
 
   // ── Encuadre y resize ─────────────────────────────────────
   function aplicarEncuadre() {
-    const z = escena.distanciaEncuadre(camara, esMovil);
+    const z = escena.distanciaEncuadre(camara, esMovil, constelacion.extension);
     // Se conserva la dirección de la órbita y solo se ajusta la distancia.
     const dir = camara.position.clone().sub(controles.target);
     const largo = dir.length() || 1;
