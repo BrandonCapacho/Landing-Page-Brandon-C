@@ -66,14 +66,25 @@ function tieneWebGL() {
   }
 }
 
-// Si el CDN se cae o un módulo revienta, degradamos en vez de dejar
-// una pantalla negra.
-window.addEventListener('error', (e) => {
-  if (e.target instanceof HTMLScriptElement || !document.getElementById('canvas').dataset.listo) {
-    mostrarRespaldo();
-  }
+// Si el CDN se cae o un módulo revienta ANTES de montar la escena,
+// degradamos en vez de dejar una pantalla negra. Los dos oyentes se
+// frenan en seco una vez `canvas.dataset.listo` queda en '1': sin esa
+// guarda, cualquier rechazo de promesa sin relación (una extensión del
+// navegador, un script de terceros) tumbaría una constelación que ya
+// estaba funcionando bien, mucho después de haber arrancado.
+window.addEventListener('error', () => {
+  if (!document.getElementById('canvas').dataset.listo) mostrarRespaldo();
 });
-window.addEventListener('unhandledrejection', mostrarRespaldo);
+window.addEventListener('unhandledrejection', () => {
+  if (!document.getElementById('canvas').dataset.listo) mostrarRespaldo();
+});
+
+// Red de seguridad: si algo se queda colgado sin llegar a lanzar un
+// error ni a montar la escena (un fetch del CDN que nunca resuelve ni
+// rechaza, por ejemplo), no dejamos la página en blanco para siempre.
+setTimeout(() => {
+  if (!document.getElementById('canvas').dataset.listo) mostrarRespaldo();
+}, 10000);
 
 if (!tieneWebGL()) {
   mostrarRespaldo();
