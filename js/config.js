@@ -225,7 +225,7 @@ export const RAZONES = [
   ['Nuestra casa', 'Imagino una casa con las dos cosas que nos gustan mezcladas sin pelear por el espacio.'],
   ['En el fondo', 'A veces hablamos en broma de cómo serían nuestros hijos, y en el fondo no suena tan lejano.'],
   ['Sin planear nada', 'Quiero hacer contigo viajes de fin de semana sin planear nada.'],
-  ['El día que te gradúes', 'Quiero estar ahí el día que te gradúes, aplaudiendo más fuerte que nadie.'],
+  ['Tu graduación', 'Ese día aplaudí más fuerte que nadie, y no fue por quedar bien.'],
   ['Presentarte', 'Quiero seguir presentándote como mi persona, sin importar cuántas veces lo repita.'],
 
   // — junto a "Te amo" —
