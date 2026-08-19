@@ -24,10 +24,13 @@ export function crearTexturaHalo() {
 }
 
 /**
- * Núcleo estrecho y brillante + resplandor suave: un secundario se lee
- * como un punto de luz, no como un planeta pequeño. Distinta de
- * crearTexturaHalo (más ancha y difusa) porque un THREE.Points de 100
- * elementos aditivos necesita menos "sobra" por punto o todo se lava.
+ * Núcleo nítido y caída rápida: una razón tiene que leerse como una
+ * lucecita, con borde. El perfil es apenas más ancho que el original y
+ * MUCHO más estrecho que el segundo intento: ensanchar el resplandor
+ * para hacerlas más visibles fue un error, porque con mezcla aditiva
+ * el halo de cien puntos se suma y lo que se consigue es una niebla
+ * lila en la que ya no se distingue nada. Lo que las hace visibles es
+ * el color y el contraste con el fondo, no el área.
  */
 export function crearTexturaPunto() {
   const s = 128;
@@ -36,8 +39,9 @@ export function crearTexturaPunto() {
   const ctx = c.getContext('2d');
   const g = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
   g.addColorStop(0.0, 'rgba(255,255,255,1)');
-  g.addColorStop(0.12, 'rgba(255,255,255,0.85)');
-  g.addColorStop(0.34, 'rgba(255,255,255,0.16)');
+  g.addColorStop(0.11, 'rgba(255,255,255,0.92)');
+  g.addColorStop(0.24, 'rgba(255,255,255,0.3)');
+  g.addColorStop(0.42, 'rgba(255,255,255,0.06)');
   g.addColorStop(1.0, 'rgba(255,255,255,0)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, s, s);
@@ -60,6 +64,18 @@ export function distanciaEncuadre(camara, esMovil, extension) {
   const tanV = Math.tan(THREE.MathUtils.degToRad(camara.fov) / 2);
   const tanH = tanV * camara.aspect;
   return Math.max((extension.y + m.y) / tanV, (extension.x + m.x) / tanH);
+}
+
+/**
+ * Distancia a la que UN racimo llena la pantalla. `alcance` es el medio
+ * ancho y medio alto del racimo ya desplegado, medidos desde su centro
+ * por Constelacion al construirse.
+ */
+export function distanciaRacimo(camara, esMovil, alcance) {
+  const m = esMovil ? AJUSTES.margenRacimoMovil : AJUSTES.margenRacimo;
+  const tanV = Math.tan(THREE.MathUtils.degToRad(camara.fov) / 2);
+  const tanH = tanV * camara.aspect;
+  return Math.max((alcance.y + m.y) / tanV, (alcance.x + m.x) / tanH);
 }
 
 export function crearCamara(ancho, alto, esMovil, extension) {
@@ -90,7 +106,9 @@ export function crearEstrellas(texturaHalo, esMovil) {
     pos[i * 3 + 2] = v.z;
 
     c.copy(azul).lerp(rosa, Math.random());
-    const brillo = 0.35 + Math.random() * 0.65;
+    const brillo =
+      AJUSTES.estrellaBrilloMin +
+      Math.random() * (AJUSTES.estrellaBrilloMax - AJUSTES.estrellaBrilloMin);
     col[i * 3] = c.r * brillo;
     col[i * 3 + 1] = c.g * brillo;
     col[i * 3 + 2] = c.b * brillo;
@@ -103,7 +121,7 @@ export function crearEstrellas(texturaHalo, esMovil) {
   const puntos = new THREE.Points(
     geo,
     new THREE.PointsMaterial({
-      size: 0.45,
+      size: AJUSTES.estrellaTam,
       sizeAttenuation: true,
       map: texturaHalo,
       transparent: true,

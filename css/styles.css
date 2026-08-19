@@ -67,7 +67,9 @@ body {
 
 .etiqueta {
   font-family: var(--serif);
-  font-size: 0.95rem;
+  /* Bajado de 0.95rem: doce etiquetas fijas se pisaban unas a otras
+     cerca del centro, donde los principales se juntan en proyección. */
+  font-size: 0.86rem;
   line-height: 1.28;
   letter-spacing: 0.015em;
   color: #fff5fa;
@@ -78,7 +80,17 @@ body {
 
 /* El desplazamiento y la píldora van en el span: el div lleva el
    transform que le escribe CSS2DRenderer y no se puede tocar desde
-   aquí. Sin backdrop-filter a propósito: 13 elementos que cambian de
+   aquí.
+
+   El desplazamiento va con calc(-50% - var(--sep)): el -50% se mide
+   sobre la ALTURA del propio elemento, así que el borde de abajo de la
+   píldora queda a --sep del nodo, dé una línea o cuatro. Y --sep lo
+   escribe el JS en PÍXELES a partir del tamaño aparente del nodo, que
+   depende de lo cerca que esté la cámara: con un valor fijo en em, al
+   entrar en una rama el disco crece al doble y la píldora le tapaba la
+   mitad de arriba. Ver constellation.js:actualizarVisual.
+
+   Sin backdrop-filter a propósito: 13 elementos que cambian de
    transform cada frame forzarían una lectura de desenfoque a pantalla
    completa por elemento en cada frame — la forma clásica de bajar un
    móvil de 60 a 20 fps. Un relleno plano y opaco da >7:1 de contraste
@@ -86,7 +98,7 @@ body {
    que es justo donde el texto blanco se perdía antes. */
 .etiqueta>span {
   display: inline-block;
-  transform: translateY(-2.35em);
+  transform: translateY(calc(-50% - var(--sep, 22px)));
   padding: 0.22em 0.66em 0.3em;
   border-radius: 999px;
   background: rgba(12, 6, 20, 0.66);
@@ -106,7 +118,7 @@ body {
 }
 
 .etiqueta.centro>span {
-  transform: translateY(-2.9em);
+  transform: translateY(calc(-50% - var(--sep, 34px)));
   padding: 0.26em 0.9em 0.34em;
   background: rgba(12, 6, 20, 0.72);
 }
@@ -116,16 +128,72 @@ body {
   color: #fff;
 }
 
-/* El globo compartido de los secundarios: más chico, sans, y sigue al
-   punto que esté resaltado en vez de tener uno fijo por nodo. */
+/* ── Los globos de las razones ─────────────────────────────
+   Dos estados. En reposo, un chip con solo el título de la razón:
+   suficientemente chico para que las ~8 de un racimo abierto quepan
+   juntas. Señalada, el chip se abre en tarjeta y suelta la frase
+   completa, así se lee sin tener que hacer clic en nada. */
+
 .etiqueta.globo {
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-family: var(--sans);
+  letter-spacing: 0;
 }
 
 .etiqueta.globo>span {
-  transform: translateY(-1.9em);
-  padding: 0.2em 0.6em 0.26em;
+  transform: translateY(calc(-50% - var(--sep, 12px)));
+  padding: 0.26em 0.66em 0.32em;
+  background: rgba(9, 4, 17, 0.78);
+  border-color: rgba(255, 143, 196, 0.16);
+  color: var(--rosa-claro);
+}
+
+.etiqueta.globo b {
+  font-weight: 500;
+}
+
+.etiqueta.globo i {
+  display: none;
+}
+
+/* CSS2DRenderer reordena las etiquetas por profundidad escribiendo
+   z-index inline en cada frame. Un !important de la hoja de estilos sí
+   gana a un inline sin !important, y es la única forma de que la
+   tarjeta abierta no acabe debajo del chip de al lado. */
+.etiqueta.globo.activa {
+  z-index: 900 !important;
+  font-size: 0.84rem;
+}
+
+.etiqueta.globo.activa>span {
+  display: block;
+  width: max-content;
+  max-width: 17rem;
+  white-space: normal;
+  text-align: left;
+  transform: translateY(calc(-50% - var(--sep, 12px) - 0.35em));
+  padding: 0.55em 0.85em 0.65em;
+  border-radius: 0.7rem;
+  background: rgba(24, 9, 36, 0.95);
+  border-color: rgba(255, 143, 196, 0.42);
+  box-shadow: 0 10px 30px rgba(3, 1, 8, 0.7), 0 0 22px rgba(255, 111, 174, 0.14);
+}
+
+.etiqueta.globo.activa b {
+  display: block;
+  margin-bottom: 0.22em;
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.1em;
+  color: var(--rosa);
+}
+
+.etiqueta.globo.activa i {
+  display: block;
+  font-style: normal;
+  line-height: 1.45;
+  color: var(--texto);
 }
 
 /* ── Encabezado, pista y firma ───────────────────────────── */
@@ -312,12 +380,18 @@ body {
     font-size: 1.15rem;
   }
 
-  .etiqueta.centro>span {
-    transform: translateY(-3.4em);
+  .etiqueta.globo {
+    font-size: 0.72rem;
   }
 
-  .etiqueta.globo {
-    font-size: 0.76rem;
+  .etiqueta.globo.activa {
+    font-size: 0.8rem;
+  }
+
+  /* En 390 px de ancho, 17rem de tarjeta se sale por un lado en cuanto
+     la razón está cerca del borde. */
+  .etiqueta.globo.activa>span {
+    max-width: 13rem;
   }
 }
 

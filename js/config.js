@@ -59,8 +59,8 @@ export const MENSAJES = [
   {
     titulo: 'Princesa',
     texto:
-      'Te digo "princesa", "reina", "hermosa" — y tú a veces me dices "gordi" y me muero de risa. ' +
-      'Ese es nuestro idioma, y no lo cambiaría por hablar bien en ningún otro.',
+      'Te digo "princesa", "reina", "hermosa" — y tú me dices "bram", o "bramcito", y me muero ' +
+      'de risa. Ese es nuestro idioma, y no lo cambiaría por hablar bien en ningún otro.',
   },
   {
     titulo: 'Cuando estás mal',
@@ -137,7 +137,7 @@ export const RAZONES = [
 
   // — junto a "Mi vida" —
   ['Corazón', 'Corazón es la palabra que más se repite en este chat, sin competencia.'],
-  ['Bebe', 'Me dices bebe y ya es un nombre que siento más mío que el real.'],
+  ['Bramcito', 'Me dices bramcito y ese nombre lo siento más mío que el de verdad.'],
   ['Preciosa', 'Preciosa te queda bien hasta en los días en que estás de mal genio.'],
   ['Apodo nuevo', 'Cada semana se nos ocurre un apodo nuevo, y siempre se queda pegado.'],
   ['Delante de todos', 'Uso tu apodo hasta delante de la gente, y no me importa que se rían.'],
@@ -260,8 +260,13 @@ export function limitesRacimo() {
 export const TEXTOS = {
   tituloPagina: 'Para Danika Jusara',
   subtitulo: 'Una constelación de razones',
-  pistaEscritorio: 'Arrastra los nodos · pasa el cursor por los puntos pequeños · haz clic para leer',
-  pistaMovil: 'Arrastra los nodos · los puntos pequeños también se tocan',
+  pistaEscritorio: 'Un clic te acerca a las razones de ese nodo · otro clic lo abre · el fondo vuelve atrás',
+  pistaMovil: 'Toca un nodo para ver sus razones · tócalo otra vez para leerlo · el fondo vuelve atrás',
+  // Se muestra mientras hay una rama abierta. Hace falta que esté a la
+  // vista todo el rato: el nodo central hace de "volver", pero desde
+  // varias ramas la cámara lo deja fuera de pantalla, así que no se
+  // puede confiar en él como única salida.
+  pistaVolver: 'Toca el fondo — o pulsa Esc — para volver a la constelación',
   firma: 'Hecho a mano por Brandon',
   cerrar: 'Cerrar',
 };
@@ -282,8 +287,17 @@ export const AJUSTES = {
   achatadoMovil: { x: 0.62, y: 1.06, z: 0.55 },
   // Espacio libre alrededor. El vertical es mayor en escritorio porque
   // ahí el título y la firma se comen los bordes de la pantalla.
-  margenEncuadre: { x: 1.5, y: 2.4 },
+  margenEncuadre: { x: 1.5, y: 1.8 },
   margenEncuadreMovil: { x: 0.9, y: 1.3 },
+  // Y el espacio libre al acercarse a UN racimo. Más holgado en
+  // vertical porque ahí van los rótulos de las razones, que se
+  // dibujan por encima de su punto.
+  margenRacimo: { x: 1.1, y: 1.6 },
+  margenRacimoMovil: { x: 0.6, y: 1.4 },
+  // Fracción del error de encuadre que se cierra en un segundo. 0.995
+  // es un viaje de cámara de algo menos de medio segundo: se lee como
+  // un desplazamiento, no como un corte, y no marea.
+  velocidadEncuadre: 0.995,
   // Desplazamiento del centro de la escena: en móvil sube para dejar
   // sitio a la hoja inferior; en escritorio baja para librar el título.
   desvioY: 0.35,
@@ -296,8 +310,87 @@ export const AJUSTES = {
   clusterTangencialMovil: 1.45,
   clusterRadial: 1.6,
   clusterRadialMovil: 1.3,
-  clusterSesgoAbajo: 0.75,
+  // Bajado de 0.75: con todos los abanicos colgando lo mismo, los
+  // racimos de abajo se apilaban unos sobre otros y ahí se concentraba
+  // todo el lavado. La banda de la etiqueta sigue despejada porque las
+  // etiquetas de los principales también se hicieron más chicas.
+  // El abanico cuelga bastante por debajo de su principal para dejar
+  // despejada la banda donde va su etiqueta. Estuvo un rato en 0.58
+  // porque con los doce racimos encendidos a la vez los de abajo se
+  // apilaban; eso ya no pasa — solo se ve una rama a la vez — así que
+  // vuelve a ser generoso.
+  clusterSesgoAbajo: 0.85,
+
+  // Forma del abanico. En escritorio es redondo; en un móvil vertical
+  // se estira a lo alto y se estrecha, porque ahí el racimo se encuadra
+  // por el ANCHO de la pantalla: un abanico redondo obliga a la cámara
+  // a quedarse lejos y el acercamiento apenas se nota. Estirándolo, la
+  // pantalla alta del teléfono se aprovecha y el racimo se ve el doble
+  // de grande. (`ancho` va sobre la tangente horizontal y `alto` sobre
+  // la vertical — ver la base e1/e2 de más abajo.)
+  clusterAncho: 1,
+  clusterAlto: 1,
+  clusterAnchoMovil: 0.72,
+  clusterAltoMovil: 1.22,
   clusterGiro: 0.7,
+
+  // Reparto de los principales en el plano de la pantalla. Las tres
+  // van en fracciones de radioHogar, así que 1.0 ≈ 5.6 unidades de
+  // mundo. Ver constellation.js:_repartirEnPantalla.
+  //
+  // sepEtiqueta{X,Y}: el espacio propio de cada etiqueta, y es una
+  // ELIPSE ancha y baja porque eso es lo que es una etiqueta. Con un
+  // radio redondo lo bastante grande para librar dos etiquetas lado a
+  // lado, doce nodos solo caben en un anillo y la composición se
+  // convierte en un reloj de doce horas.
+  //
+  // sepCentro{X,Y}: lo mismo para el nodo central, que no se mueve y
+  // lleva la etiqueta más grande de la escena — de ahí que reclame
+  // bastante más sitio. Es una repulsión, no un radio mínimo rígido:
+  // un suelo radial conserva el ángulo, así que dos principales que
+  // llegaran casi alineados con el centro volvían a juntarse en cuanto
+  // se los apartaba, y se quedaban pegados para siempre.
+  //
+  // distanciaEstimada: a cuántos radioHogar se acaba poniendo la
+  // cámara. El reparto necesita la división perspectiva — sin ella, dos
+  // nodos con x,y distintas pero z muy distinta se proyectan al mismo
+  // píxel, que es justo el solape que se quiere evitar — y la distancia
+  // real no se conoce hasta después de generar la geometría. Un valor
+  // aproximado sobra: esto es una heurística de composición, no una
+  // medida. Medido contra el encuadre real: 11.36 / 5.6 ≈ 2.03. (Estuvo
+  // en 2.7, de una versión anterior en la que la cámara se quedaba más
+  // lejos, y con ese valor la perspectiva del reparto salía desviada un
+  // 35 % — de ahí que alguna etiqueta acabara donde no debía.)
+  // Los valores llevan margen para el VAIVÉN: los nodos no se quedan
+  // en su sitio de reposo, se mecen ~10 px, y dos etiquetas separadas
+  // por el mínimo justo se solapaban a ratos. Comprobado que con estos
+  // dos las 66 parejas quedan sin solape y sin ninguna en riesgo; 0.52
+  // en X ya no converge, así que el sistema anda cerca de su límite.
+  // Cuentas a 400 px por unidad de reparto (1 unidad = radioHogar a la
+  // distancia del conjunto): una etiqueta mide ~90-130 px de ancho y 27
+  // de alto, así que 0.4 → 160 px y 0.14 → 56 px, con margen de sobra
+  // para el vaivén de ~10 px por nodo.
+  sepEtiquetaX: 0.4,
+  sepEtiquetaY: 0.14,
+  // Y una separación REDONDA para los nodos en sí. La elipse de las
+  // etiquetas deja pasar dos nodos casi en la misma vertical, y aunque
+  // sus rótulos no se toquen, sus discos sí: se ven como una sola
+  // mancha, y peor aún, sus esferas de clic se solapan y uno de los doce
+  // mensajes se vuelve imposible de acertar. Son dos exigencias
+  // distintas y hacen falta las dos. A 0.34 la pareja más apretada queda
+  // por encima del diámetro de clic (radioGolpe) y el reparto todavía se
+  // ve orgánico; hacia 0.38 empieza a aplanarse en un anillo.
+  sepNodo: 0.25,
+  sepCentroX: 0.66,
+  sepCentroY: 0.32,
+  // La zona prohibida del centro va DESPLAZADA HACIA ARRIBA. Su etiqueta
+  // es la más grande y se dibuja ~74 px por encima de su nodo, mientras
+  // que la de un principal va a ~38 px del suyo: 36 px de diferencia, que
+  // a 400 px por unidad de reparto son 0.09. Sin este desplazamiento la
+  // elipse queda centrada en el nodo y no en el rótulo, y por ahí se
+  // colaba el único solape que quedaba.
+  desfaseCentroY: 0.09,
+  distanciaEstimada: 2.03,
 
   // Enlaces: una topología fija (no por distancia, que a 112 nodos
   // parpadea). Cuatro tipos — ver constellation.js:construirAristas.
@@ -307,37 +400,122 @@ export const AJUSTES = {
   arranqueRadio: 1.35, // los radios del centro no arrancan en el punto
   estiron: 1.7, // una arista se apaga al estirarse más de esta razón
   brilloEnlace: [0.8, 0.42, 0.28, 0.18], // radio, anillo, peciolo, red
-  opacidadEnlace: 0.72,
+  opacidadEnlace: 0.62,
 
-  radioNodo: 0.4, // tamaño visible de un principal
+  // Núcleo de un principal: pequeño a propósito, y el tamaño lo lleva
+  // el halo. Un MeshBasicMaterial no tiene sombreado, así que la esfera
+  // se ve como un disco plano: chica pasa por una luz, pero al entrar
+  // en su rama crece a 40 px de radio y se convierte en una bola blanca
+  // lavada. Con el núcleo chico y el halo ancho la cosa se lee igual de
+  // cerca que de lejos.
+  radioNodo: 0.24,
+  escalaHaloPri: 2.4,
+  opacidadHaloPri: 0.7,
+  opacidadHaloPriApagado: 0.1, // cuando otro racimo tiene el foco
   radioGolpe: 0.5, // objetivo de clic de un principal (invisible)
   radioGolpeMovil: 0.95,
 
-  // Los secundarios son puntos, no mallas: su objetivo de clic es el
-  // umbral de Raycaster.params.Points, un radio en unidades de mundo.
-  escalaPunto: 1.1,
-  escalaPuntoMovil: 0.95,
-  umbralPuntos: 0.42,
-  umbralPuntosMovil: 0.55,
-  sesgoPrincipal: 0.7, // en un empate, gana el principal
+  // ── Los puntos de las razones ───────────────────────────────
+  // Tamaño base en unidades de mundo. El shader propio (ver
+  // constellation.js) permite que cada punto tenga el suyo, cosa que
+  // PointsMaterial no puede: su `size` es un uniforme único para los
+  // 100. Esa variedad es la diferencia entre una constelación y un
+  // moteado de 100 manchas idénticas.
+  escalaPunto: 1.2,
+  escalaPuntoMovil: 1.05,
+  variacionPunto: 0.3, // ±30 % de tamaño entre puntos
+  latidoPunto: 0.08, // respiración lenta, desfasada por punto
+  // Cuánto crece y se aviva la razón señalada. Con 1.3/1.0 el punto se
+  // iba a blanco y de cerca era una bola de 60 px: se nota igual con
+  // menos, y ahora quien lleva la voz es su tarjeta de texto.
+  resalteTam: 0.85,
+  resalteBrillo: 0.7,
+
+  // El objetivo de clic es el umbral de Raycaster.params.Points, un
+  // radio en unidades de mundo. A propósito MAYOR que el radio visible
+  // del punto: apuntar tiene que perdonar, no exigir puntería.
+  umbralPuntos: 0.62,
+  umbralPuntosMovil: 0.9,
+  // En un empate de profundidad gana el objetivo grande. El centro lleva
+  // un sesgo aparte y mucho mayor: dentro de una rama sus razones pasan
+  // por delante de él, así que por distancia ganaban ellas y el nodo
+  // central — que es el botón de "volver" — dejaba de responder aunque
+  // se estuviera pinchando justo en medio de su disco.
+  sesgoPrincipal: 0.7,
+  sesgoCentro: 2.4,
+
+  // ── Foco por racimo ─────────────────────────────────────────
+  // Señalar un nodo grande enciende su racimo y apaga el resto. Es lo
+  // que hace legibles 100 razones: en vez de cazarlas de una en una,
+  // se leen las ~8 de una familia a la vez, con el resto de la escena
+  // en penumbra para que no compitan.
+  // Al abrirse, el racimo se despliega: sus razones se separan de su
+  // principal para que los rótulos dejen de pisarse unos a otros. La
+  // animación la hace el muelle de la física, no hay que interpolarla.
+  expansionFoco: 1.25,
+
+  // Las razones de un racimo cerrado están APAGADAS DEL TODO, no
+  // atenuadas: al llegar solo se ven los doce mensajes y la red que los
+  // une, y las razones de una rama aparecen al entrar en ella. Cien
+  // puntos a la vez son un cielo bonito pero ilegible; ocho son una
+  // lista. Lo que está apagado tampoco se puede tocar — ver
+  // interaction.js:golpear.
+  atenuadoSec: 0, // puntos de los racimos cerrados
+  atenuadoNucleoPri: 0.26, // núcleo de los otros once principales
+  atenuadoEnlace: 0.12, // sus enlaces
+  atenuadoEtiquetaPri: 0.16, // sus etiquetas
+  atenuadoCentro: 0.3, // y el nodo central, que es el más luminoso
+  brilloEnlaceFoco: 1.45, // los enlaces del racimo enfocado sí se avivan
 
   // Física — separada por nivel: los secundarios deben aguantar la
   // forma del racimo o el racimo deja de leerse como tal.
   sepPri: 0.55, // radio de confort de un principal
   sepSec: 0.32,
-  kHogarPri: 3.2, // fuerza del muelle hacia la posición de reposo
-  kHogarSec: 4.6,
-  derivaPri: 0.85, // amplitud del vaivén
-  derivaSec: 0.35,
+
+  // Muelle y deriva van EN PAREJA: la excursión en reposo es
+  // deriva/kHogar, así que subir los dos en la misma proporción deja
+  // el vaivén exactamente igual de amplio y solo cambia lo rápido que
+  // el nodo responde. Y hacía falta que respondiera mucho más rápido:
+  // con kHogarSec en 4.6 el sistema quedaba sobreamortiguado con una
+  // constante de tiempo de ~1.7 s, y de ahí venía media sensación de
+  // que los puntos pequeños no reaccionaban — soltar uno tras
+  // arrastrarlo tardaba cinco segundos en volver a su sitio, y
+  // desplegar un racimo, más. A 14 el amortiguamiento queda casi
+  // crítico (τ ≈ 0.55 s): responde en medio segundo y no rebota.
+  kHogarPri: 6, // era 3.2 con deriva 0.85
+  kHogarSec: 14, // era 4.6 con deriva 0.35
+  // El vaivén de los principales se recorta a 0.117 unidades por eje
+  // (~8 px en pantalla, ~14 px sumando los tres ejes): es el margen que
+  // las separaciones de arriba dan por bueno. Medido con 1.1, el desvío
+  // real respecto del sitio de reposo era de 28 px, más de lo que
+  // aguantaba el reparto. Sigue siendo movimiento perceptible.
+  derivaPri: 0.7,
+  derivaSec: 1.07, // 1.07/14 = 0.076, la misma excursión que 0.35/4.6
   kRepulsion: 6,
   kMuro: 4,
   amortiguacion: 0.88, // por cada 1/60 s
   velocidadMax: 6,
-  rotacionMarco: 0.035, // rad/s a los que gira la constelación entera
+  // El conjunto NO gira, y es una decisión, no un olvido. El reparto de
+  // los doce en pantalla (constellation.js:_repartirEnPantalla) se
+  // calcula una sola vez para que ninguna etiqueta pise a otra, y un giro
+  // continuo lo deshace: medido, el giro movía un nodo 94 px en 15 s y el
+  // yaw no paraba de crecer, así que tarde o temprano cualquier pareja
+  // acababa solapada. Entre una constelación que gira despacio con los
+  // rótulos pisándose y una quieta que siempre se lee, gana la segunda —
+  // y de movimiento ya hay bastante: los nodos se mecen, las razones
+  // respiran, los enlaces titilan, y la órbita sigue siendo del visitante.
+  // Ponerlo en 0.035 devuelve el giro, a cambio de la legibilidad.
+  rotacionMarco: 0,
 
-  // Estrellas
-  estrellas: 1200,
-  estrellasMovil: 300,
+  // Estrellas de fondo. Deliberadamente más pequeñas y apagadas que
+  // antes: con 1200 estrellas brillantes del mismo tamaño que una
+  // razón, las 100 razones se leían como parte del decorado. El fondo
+  // tiene que quedar claramente por debajo de lo que se puede tocar.
+  estrellas: 900,
+  estrellasMovil: 260,
+  estrellaTam: 0.3,
+  estrellaBrilloMin: 0.18,
+  estrellaBrilloMax: 0.5,
 
   // En un móvil, con el hemisferio trasero también etiquetado la
   // escena se ve más saturada de lo que un texto necesita.
@@ -346,12 +524,24 @@ export const AJUSTES = {
   // Colores
   colorCentro: 0xffe3ee,
   colorHaloCentro: 0xff6fae,
-  escalaHaloCentro: 4.2,
-  opacidadHaloCentro: 0.5,
-  radioNucleoCentro: 0.95,
-  colorEnlace: [1.0, 0.42, 0.68],
+  escalaHaloCentro: 3.4,
+  opacidadHaloCentro: 0.42,
+  radioNucleoCentro: 0.55, // era 0.95: un disco blanco de 100 px tapaba el medio
+  colorEnlace: [1.0, 0.4, 0.66],
   tonoNodoMin: 0.82, // matiz HSL de los principales: 0.82 violeta → 0.96 rosa
   tonoNodoMax: 0.96,
-  satSec: 0.62, // los secundarios van menos saturados: son 100 sumando luz
-  luzSec: 0.66,
+  // Luminosidad y saturación del núcleo de un principal. La clave está
+  // en el canal MÁS BAJO del color, que es el que decide si se ve rosa o
+  // blanco: en HSL ese canal vale L−S(1−L), y el halo aditivo le suma
+  // otro tanto por su opacidad. Con L=0.7 salía a 0.43 y el halo lo
+  // subía a 0.73 — blanco. Con L=0.55 sale a 0.14 y acaba en 0.23, que
+  // sigue siendo rosa de verdad. Los otros dos canales saturan a 1, y
+  // eso está bien: es lo que hace una luz brillante.
+  luzPri: 0.55,
+  satPri: 0.92,
+  // Los secundarios: bastante más vivos que antes. Iban a 0.62/0.66 y
+  // sobre el fondo violeta quedaban grisáceos; el margen para subirlos
+  // lo da el campo de estrellas, ahora más apagado.
+  satSec: 0.8,
+  luzSec: 0.76,
 };

@@ -154,7 +154,7 @@ async function iniciar() {
   );
   scene.add(constelacion.grupo);
 
-  const camara = escena.crearCamara(ancho(), alto(), esMovil, constelacion.extension);
+  const camara = escena.crearCamara(ancho(), alto(), esMovil, constelacion.extensionPri);
   camara.position.y = desvioY;
 
   // ── Órbita ────────────────────────────────────────────────
@@ -176,13 +176,72 @@ async function iniciar() {
   } else {
     controles.enableZoom = true;
   }
-  aplicarEncuadre();
+  // ── Encuadre: del conjunto a un racimo y vuelta ───────────
+  // Tocar un nodo acerca la cámara a su racimo, que es donde las
+  // razones se ven grandes y se leen sin esfuerzo. La cámara se mueve
+  // interpolando SOLO el punto al que mira y su distancia; la dirección
+  // de la órbita se deja intacta, así que el viaje no le arrebata al
+  // visitante el ángulo desde el que estaba mirando.
+  let racimoMirado = null;
+  let distConjunto = 0;
+  let distRacimo = 0;
+  const metaMira = new THREE.Vector3();
+  const _dirCam = new THREE.Vector3();
+  const _miraAntes = new THREE.Vector3();
+
+  function recalcularDistancias() {
+    distConjunto = escena.distanciaEncuadre(camara, esMovil, constelacion.extensionPri);
+    distRacimo = escena.distanciaRacimo(camara, esMovil, constelacion.alcanceRacimo);
+    // Los topes de la rueda tienen que dar cabida a los dos encuadres,
+    // o el zoom del usuario frenaría el viaje de la cámara en seco.
+    controles.minDistance = distRacimo * 0.5;
+    controles.maxDistance = distConjunto * 1.5;
+  }
+
+  // La pista de abajo se vuelve contextual: dentro de una rama dice cómo
+  // salir, y en el conjunto se queda apagada una vez que ya se ha
+  // interactuado (su texto de bienvenida ya cumplió).
+  const pista = document.getElementById('pista');
+
+  /** Fija a dónde tiene que ir la cámara. null = vuelta al conjunto. */
+  function enfocarCamara(nodo) {
+    racimoMirado =
+      !nodo || nodo.esCentro ? null : nodo.esPrincipal ? nodo.idxPri : nodo.racimo;
+    if (racimoMirado === null) {
+      pista.style.opacity = '0';
+    } else {
+      pista.textContent = TEXTOS.pistaVolver;
+      pista.style.opacity = '1';
+    }
+    pedirRender();
+  }
+
+  function pasoEncuadre(dt, instantaneo = false) {
+    if (racimoMirado === null) metaMira.set(0, desvioY, 0);
+    else constelacion.centroRacimo(racimoMirado, metaMira);
+    const metaDist = racimoMirado === null ? distConjunto : distRacimo;
+
+    // Fracción por frame equivalente a velocidadEncuadre por segundo:
+    // así el viaje dura lo mismo a 60 que a 120 Hz.
+    const k = instantaneo ? 1 : 1 - Math.pow(1 - AJUSTES.velocidadEncuadre, dt);
+
+    _miraAntes.copy(controles.target);
+    controles.target.lerp(metaMira, k);
+
+    _dirCam.subVectors(camara.position, _miraAntes);
+    const largo = _dirCam.length() || 1;
+    const nuevo = largo + (metaDist - largo) * k;
+    camara.position.copy(controles.target).addScaledVector(_dirCam, nuevo / largo);
+  }
+
+  recalcularDistancias();
+  pasoEncuadre(0, true);
   controles.update();
 
   // ── Panel e interacción ───────────────────────────────────
   const panel = interaccion.crearPanel();
   interaccion.conectarInteraccion({
-    canvas, camara, controles, constelacion, panel, pedirRender, esMovil,
+    canvas, camara, controles, constelacion, panel, pedirRender, esMovil, enfocarCamara,
   });
 
   // ── Bucle ─────────────────────────────────────────────────
@@ -209,26 +268,54 @@ async function iniciar() {
     renderer.setAnimationLoop(null);
   }
 
+  // Frames consecutivos con la escena quieta. El criterio es la
+  // quietud sostenida, y NO "cada nodo está en su sitio de reposo":
+  // con un racimo desplegado, un nodo puede pararse del todo en un
+  // compromiso entre su muelle y la repulsión del vecino, a una
+  // distancia de su sitio que nunca llega a cero — y con ese criterio
+  // el bucle se quedaba girando para siempre. Doce frames porque
+  // velocidad ~0 en uno solo no prueba nada: un nodo en el vértice de
+  // su recorrido también la tiene, justo antes de volver.
+  const FRAMES_QUIETOS = 12;
+  let framesQuietos = 0;
+
   function enReposo() {
-    // Con 112 nodos (antes 12) siempre hay alguno con un resto minúsculo
-    // de velocidad; el umbral se afloja o el bucle nunca llega a aparcar.
-    for (const nodo of constelacion.todos) {
-      if (nodo.arrastrando || nodo.vel.lengthSq() > 4e-3) return false;
-      if (nodo.pos.distanceToSquared(nodo.home) > 4e-3) return false;
+    // Un resalte o un foco a medio interpolar cuenta como movimiento:
+    // aparcar aquí congelaría el efecto por el camino.
+    if (constelacion.transicionActiva()) {
+      framesQuietos = 0;
+      return false;
     }
-    return true;
+    for (const nodo of constelacion.todos) {
+      if (nodo.arrastrando || nodo.vel.lengthSq() > 4e-3) {
+        framesQuietos = 0;
+        return false;
+      }
+    }
+    return ++framesQuietos >= FRAMES_QUIETOS;
   }
 
   function tick() {
     // Acotado: al volver de una pestaña oculta, un dt enorme mandaría
     // todos los nodos contra el muro de un solo frame.
     reloj.update();
-    const dt = Math.min(reloj.getDelta(), 1 / 30);
+    const dtReal = reloj.getDelta();
+    const dt = Math.min(dtReal, 1 / 30);
     tiempo += dt;
 
     if (!modoDemanda) estrellas.rotation.y += 0.00015;
 
     constelacion.actualizar(tiempo, dt, camara);
+    // Después de la física, para que el centro del racimo sea el de
+    // este frame, y antes de controles.update(), que es quien detecta
+    // que la cámara se movió y mantiene el bucle despierto.
+    //
+    // Con dtReal, no con el dt recortado de la física: el viaje de
+    // cámara tiene que durar lo mismo medido en reloj de pared en
+    // cualquier equipo. La interpolación es estable con cualquier dt
+    // (el factor nunca pasa de 1), así que aquí el recorte solo haría
+    // que en un equipo lento el acercamiento se arrastrara.
+    pasoEncuadre(dtReal);
     const camaraMovio = controles.update();
 
     renderer.render(scene, camara);
@@ -237,7 +324,10 @@ async function iniciar() {
     // En movimiento reducido no dejamos el bucle girando por gusto:
     // se para cuando la escena se aquieta y se despierta al interactuar.
     if (modoDemanda) {
-      if (!camaraMovio && !necesitaRender && enReposo()) parar();
+      // Sin cortocircuito: si la cámara se movió hay que RESETEAR la
+      // cuenta de quietud, no solo saltarse la comprobación.
+      if (camaraMovio || necesitaRender) framesQuietos = 0;
+      else if (enReposo()) parar();
       necesitaRender = false;
     }
   }
@@ -254,19 +344,7 @@ async function iniciar() {
 
   arrancar();
 
-  // ── Encuadre y resize ─────────────────────────────────────
-  function aplicarEncuadre() {
-    const z = escena.distanciaEncuadre(camara, esMovil, constelacion.extension);
-    // Se conserva la dirección de la órbita y solo se ajusta la distancia.
-    const dir = camara.position.clone().sub(controles.target);
-    const largo = dir.length() || 1;
-    camara.position.copy(controles.target).add(dir.multiplyScalar(z / largo));
-    if (controles.enableZoom) {
-      controles.minDistance = z * 0.6;
-      controles.maxDistance = z * 1.6;
-    }
-  }
-
+  // ── Resize ────────────────────────────────────────────────
   let pendiente = false;
   function alRedimensionar() {
     if (pendiente) return;
@@ -276,7 +354,9 @@ async function iniciar() {
       const w = ancho(), h = alto();
       camara.aspect = w / h;
       camara.updateProjectionMatrix();
-      aplicarEncuadre();
+      // Las dos distancias dependen del aspecto; el encuadre en sí lo
+      // recoloca la interpolación del bucle, sin salto.
+      recalcularDistancias();
       // El devicePixelRatio cambia al mover la ventana entre monitores.
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, esMovil ? 1.5 : 2));
       renderer.setSize(w, h, false);

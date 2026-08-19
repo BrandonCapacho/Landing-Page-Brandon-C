@@ -6,7 +6,9 @@ import { AJUSTES } from './config.js';
 const UMBRAL_ARRASTRE = 6; // px antes de considerarlo arrastre y no toque
 const DURACION_TOQUE = 350; // ms
 
-export function conectarInteraccion({ canvas, camara, controles, constelacion, panel, pedirRender, esMovil }) {
+export function conectarInteraccion({
+  canvas, camara, controles, constelacion, panel, pedirRender, esMovil, enfocarCamara,
+}) {
   const raycaster = new THREE.Raycaster();
   // Los secundarios son un THREE.Points, no mallas: el "objetivo de
   // clic" de ese nivel es este umbral, un radio en unidades de mundo.
@@ -25,6 +27,11 @@ export function conectarInteraccion({ canvas, camara, controles, constelacion, p
   let xInicio = 0, yInicio = 0, tInicio = 0, tUltima = 0;
   let movido = false;
   let nodoHover = null;
+  // Un puntero que bajó sobre el cielo vacío. Se sigue aparte porque
+  // todavía no se sabe qué es: puede acabar en un giro de cámara o en
+  // un toque, y solo el toque cierra el racimo abierto.
+  let idCielo = null;
+  let xCielo = 0, yCielo = 0, tCielo = 0;
 
   function aNDC(e) {
     const r = canvas.getBoundingClientRect();
@@ -39,14 +46,57 @@ export function conectarInteraccion({ canvas, camara, controles, constelacion, p
     aNDC(e);
     raycaster.setFromCamera(ndc, camara);
     const pri = raycaster.intersectObjects(constelacion.golpes, false)[0] || null;
-    const sec = constelacion.puntos
-      ? raycaster.intersectObject(constelacion.puntos, false)[0] || null
-      : null;
+
+    // De los secundarios solo cuentan los del racimo abierto: los demás
+    // están apagados y no se puede tocar lo que no se ve. Se recorre la
+    // lista entera de impactos en vez de tomar el primero, porque el más
+    // cercano puede ser justo uno apagado y taparía al que sí se ve.
+    let sec = null;
+    if (constelacion.puntos && constelacion.racimoEnfocado !== null) {
+      for (const impacto of raycaster.intersectObject(constelacion.puntos, false)) {
+        if (constelacion.secundarios[impacto.index].racimo === constelacion.racimoEnfocado) {
+          sec = impacto;
+          break;
+        }
+      }
+    }
+
     if (!pri) return sec ? constelacion.secundarios[sec.index] : null;
-    if (!sec) return pri.object.userData.nodo;
-    return pri.distance <= sec.distance + AJUSTES.sesgoPrincipal
-      ? pri.object.userData.nodo
+    const nodoPri = pri.object.userData.nodo;
+    if (!sec) return nodoPri;
+    const sesgo = nodoPri.esCentro ? AJUSTES.sesgoCentro : AJUSTES.sesgoPrincipal;
+    return pri.distance <= sec.distance + sesgo
+      ? nodoPri
       : constelacion.secundarios[sec.index];
+  }
+
+  /**
+   * Qué hace un toque en un nodo, y son DOS PASOS a propósito: el
+   * primero entra en la rama — la cámara se acerca y sus razones se
+   * encienden — y el segundo, ya de cerca, abre el mensaje. Así se
+   * explora antes de leer, en vez de comerse un panel a pantalla
+   * completa en el primer roce. Una razón se abre al primer toque:
+   * llegar hasta ella ya fue el paso de exploración.
+   */
+  function abrirOEntrar(nodo) {
+    if (nodo.esCentro) {
+      // El centro es el botón de "volver": desde una rama devuelve el
+      // conjunto, y ya en el conjunto abre su propio mensaje.
+      if (constelacion.racimoEnfocado !== null) {
+        constelacion.establecerFoco(null);
+        constelacion.establecerResaltado(null);
+        enfocarCamara(null);
+      } else {
+        panel.abrir(nodo.datos);
+      }
+      return;
+    }
+    if (nodo.esPrincipal && constelacion.racimoEnfocado !== nodo.idxPri) {
+      constelacion.establecerFoco(nodo.idxPri);
+      enfocarCamara(nodo);
+      return;
+    }
+    panel.abrir(nodo.datos);
   }
 
   function terminarArrastre(nodo) {
@@ -67,7 +117,16 @@ export function conectarInteraccion({ canvas, camara, controles, constelacion, p
   function alBajar(e) {
     if (idActivo !== null) return; // un segundo dedo no secuestra el arrastre
     const nodo = golpear(e);
-    if (!nodo) return; // no dio en un nodo: que orbite la cámara
+    if (!nodo) {
+      // Aquí NO se cierra nada: esto puede ser el principio de un giro
+      // de cámara, y cerrar el racimo a media órbita desconcierta. Se
+      // decide al levantar, cuando ya se sabe si fue toque o arrastre.
+      idCielo = e.pointerId;
+      xCielo = e.clientX;
+      yCielo = e.clientY;
+      tCielo = performance.now();
+      return; // y que orbite la cámara
+    }
 
     e.stopPropagation();
     controles.enabled = false;
@@ -136,6 +195,22 @@ export function conectarInteraccion({ canvas, camara, controles, constelacion, p
   }
 
   function alSubir(e) {
+    // Toque en el cielo vacío: cierra el racimo y devuelve la cámara al
+    // conjunto. Un arrastre por el cielo es una órbita y no cierra nada.
+    if (e.pointerId === idCielo) {
+      idCielo = null;
+      const toqueCielo =
+        Math.hypot(e.clientX - xCielo, e.clientY - yCielo) <= UMBRAL_ARRASTRE &&
+        performance.now() - tCielo < DURACION_TOQUE;
+      if (toqueCielo) {
+        constelacion.establecerFoco(null);
+        constelacion.establecerResaltado(null);
+        enfocarCamara(null);
+        pedirRender();
+      }
+      return;
+    }
+
     if (e.pointerId !== idActivo) return;
     try {
       canvas.releasePointerCapture(e.pointerId);
@@ -146,8 +221,8 @@ export function conectarInteraccion({ canvas, camara, controles, constelacion, p
 
     if (nodo && fueToque) {
       if (nodo.vel) nodo.vel.set(0, 0, 0);
-      panel.abrir(nodo.datos);
       ocultarPista();
+      abrirOEntrar(nodo);
     } else if (nodo && nodo.vel) {
       nodo.vel.multiplyScalar(0.6); // soltar con impulso amortiguado
     }
@@ -170,21 +245,22 @@ export function conectarInteraccion({ canvas, camara, controles, constelacion, p
       if (nodo && !nodo.esCentro) nodo.resaltado = true;
       if (nodoHover?.etiqueta) nodoHover.etiqueta.element.classList.remove('activa');
       if (nodo?.etiqueta) nodo.etiqueta.element.classList.add('activa');
-      // El globo y el resaltador son solo para un secundario de verdad;
-      // sobre un principal o el centro, que se apague si estaba prendido.
-      constelacion.establecerResaltado(nodo && !nodo.esPrincipal && !nodo.esCentro ? nodo : null);
+      // El globo con el texto entero es solo para una razón; sobre un
+      // principal o el centro, que se cierre si estaba abierto. Señalar
+      // NO cambia de rama: entrar en una es una decisión, y que el
+      // cursor de paso reorganizara la escena sería insoportable.
+      constelacion.establecerResaltado(nodo);
       nodoHover = nodo;
       pedirRender();
     }
     canvas.style.cursor = nodo ? 'grab' : 'default';
   }
 
-  let pista = document.getElementById('pista');
+  // Se apaga, no se descarta: main.js la vuelve a encender con el texto
+  // de "cómo volver" en cuanto se entra en una rama.
+  const pista = document.getElementById('pista');
   function ocultarPista() {
-    if (pista) {
-      pista.style.opacity = '0';
-      pista = null;
-    }
+    if (pista) pista.style.opacity = '0';
   }
 
   canvas.addEventListener('pointerdown', alBajar, { capture: true });
@@ -196,14 +272,30 @@ export function conectarInteraccion({ canvas, camara, controles, constelacion, p
   canvas.addEventListener('pointercancel', alSubir);
   canvas.addEventListener('lostpointercapture', alSubir);
 
+  // Escape sale de la rama. Es la salida que siempre está disponible: el
+  // nodo central queda fuera de pantalla desde varias ramas, y el cielo
+  // vacío hay que buscarlo. Solo actúa con el panel cerrado, porque con
+  // el panel abierto Escape ya significa "cerrar el panel".
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || panel.abierto) return;
+    if (constelacion.racimoEnfocado === null) return;
+    constelacion.establecerFoco(null);
+    constelacion.establecerResaltado(null);
+    enfocarCamara(null);
+    pedirRender();
+  });
+
   if (!esMovil) {
     canvas.addEventListener('pointerleave', () => {
       if (idActivo === null && nodoHover) {
         if (!nodoHover.esCentro) nodoHover.resaltado = false;
         nodoHover.etiqueta?.element.classList.remove('activa');
-        if (!nodoHover.esPrincipal && !nodoHover.esCentro) constelacion.establecerResaltado(null);
+        // El racimo abierto se queda abierto: salir del lienzo no es
+        // una decisión de cerrar nada.
+        constelacion.establecerResaltado(null);
         nodoHover = null;
         canvas.style.cursor = 'default';
+        pedirRender();
       }
     });
   }
